@@ -75,6 +75,10 @@ export function ProfilePage() {
         </ul>
       </div>
 
+      <p className="small muted" style={{ marginTop: 24 }}>
+        <a href="/privacy">隱私政策</a> · <a href="/terms">服務條款</a>
+      </p>
+
       <h2>危險區域</h2>
       <div className="card">
         <button className="danger" onClick={deleteAll}>

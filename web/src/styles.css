@@ -188,3 +188,12 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
   padding: 6px 10px; font-size: 0.82rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .chart .tip b { font-variant-numeric: tabular-nums; }
+
+/* 隱私政策／服務條款 */
+.legal { min-height: 100vh; background: var(--bg); padding: 32px 16px 64px; }
+.legal-inner { max-width: 720px; margin: 0 auto; line-height: 1.75; }
+.legal h1 { margin-top: 16px; }
+.legal h2 { margin-top: 32px; }
+.legal ul { padding-left: 22px; }
+.legal li + li { margin-top: 6px; }
+.legal hr { border: none; border-top: 1px solid var(--border); margin: 40px 0 16px; }

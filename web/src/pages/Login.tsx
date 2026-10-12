@@ -6,6 +6,7 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { auth } from "../firebase";
 
 const ERRORS: Record<string, string> = {
@@ -100,6 +101,9 @@ export function LoginPage() {
             </button>
           )}
         </div>
+        <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
+          登入即表示你同意<Link to="/terms">服務條款</Link>與<Link to="/privacy">隱私政策</Link>
+        </p>
       </div>
     </div>
   );

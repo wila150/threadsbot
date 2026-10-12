@@ -7,6 +7,7 @@ import { AdminPage } from "./pages/Admin";
 import { DraftsPage } from "./pages/Drafts";
 import { HistoryPage } from "./pages/History";
 import { HomePage } from "./pages/Home";
+import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { LoginPage } from "./pages/Login";
 import { OnboardingPage } from "./pages/Onboarding";
 import { ProfilePage } from "./pages/Profile";
@@ -17,6 +18,10 @@ import { useSession } from "./session";
 export function App() {
   const { authUser, user, ready, isAdmin, bootstrapError, retryBootstrap } = useSession();
   const location = useLocation();
+
+  // 公開頁面：不用登入就能看（Meta 審核需要）
+  if (location.pathname === "/privacy") return <PrivacyPage />;
+  if (location.pathname === "/terms") return <TermsPage />;
 
   if (!ready) return <div className="splash">載入中…</div>;
   if (!authUser) return <LoginPage />;
