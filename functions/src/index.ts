@@ -144,7 +144,8 @@ export const patrolScheduler = onSchedule({ schedule: "every 10 minutes", timeZo
 export const patrolAccountTask = onTaskDispatched<PatrolTask>(
   {
     secrets: [ENCRYPTION_KEY, NVIDIA_API_KEY],
-    timeoutSeconds: 300,
+    // 較慢的模型一則要 30～40 秒，留足時間
+    timeoutSeconds: 540,
     memory: "512MiB",
     retryConfig: { maxAttempts: 2, minBackoffSeconds: 60 },
     // 共用 AI key 每模型每分鐘 40 次，同時只跑少量帳號

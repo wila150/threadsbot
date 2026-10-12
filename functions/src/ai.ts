@@ -114,8 +114,8 @@ export async function generateReply(
       { role: "system", content: systemPrompt(settings) },
       { role: "user", content: `貼文作者：@${post.author}\n貼文內容：\n${post.text}` },
     ],
-    // 推理模型需要多一點 token
-    Math.max(400, settings.maxChars * 4),
+    // 推理模型會先花掉幾百個 token 思考，要留足空間
+    Math.max(1500, settings.maxChars * 10),
   );
   return parseResult(raw, settings.maxChars);
 }

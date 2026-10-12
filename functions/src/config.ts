@@ -16,7 +16,7 @@ export const AI_BASE_URL = defineString("AI_BASE_URL", {
   default: "https://integrate.api.nvidia.com/v1",
 });
 
-export const DEFAULT_MODEL = "deepseek-ai/deepseek-v4.1-flash";
+export const DEFAULT_MODEL = "z-ai/glm-5.3-flash";
 
 /** Threads 關鍵字搜尋每個用戶 24 小時約 2,200 次，留一點緩衝 */
 export const THREADS_SEARCH_DAILY_CAP = 2000;

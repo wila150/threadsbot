@@ -87,10 +87,5 @@ export interface PlanDoc {
 
 export const DEFAULT_PLAN: PlanDoc = { name: "免費", maxAccounts: 1, dailyLimit: 20, allowAutoSend: false };
 
-export const MODEL_SUGGESTIONS = [
-  "deepseek-ai/deepseek-v4.1-flash",
-  "z-ai/glm-5.3-flash",
-  "moonshotai/kimi-k2.6",
-  "google/gemma-4-31b-it",
-  "z-ai/glm-5.3",
-];
+/** 2026-10 用共用 key 實測可用；glm-5.3-flash 最快（約 9 秒） */
+export const MODEL_SUGGESTIONS = ["z-ai/glm-5.3-flash", "deepseek-ai/deepseek-v4.1-flash", "z-ai/glm-5.3"];

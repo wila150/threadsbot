@@ -51,7 +51,7 @@ export async function dispatchPatrols(): Promise<number> {
     if (!user || user.disabled) continue;
 
     try {
-      await queue.enqueue({ uid, accountId: doc.id }, { id: `p-${uid}-${doc.id}-${slot}`, dispatchDeadlineSeconds: 300 });
+      await queue.enqueue({ uid, accountId: doc.id }, { id: `p-${uid}-${doc.id}-${slot}`, dispatchDeadlineSeconds: 600 });
       count++;
     } catch (err: any) {
       // 同 id 已派發過
@@ -260,5 +260,5 @@ function shuffle<T>(arr: T[]): T[] {
 export async function enqueuePatrolNow(uid: string, accountId: string) {
   await getFunctions()
     .taskQueue<PatrolTask>(`locations/${REGION}/functions/patrolAccountTask`)
-    .enqueue({ uid, accountId }, { id: `m-${uid}-${accountId}-${Date.now()}` });
+    .enqueue({ uid, accountId }, { id: `m-${uid}-${accountId}-${Date.now()}`, dispatchDeadlineSeconds: 600 });
 }
