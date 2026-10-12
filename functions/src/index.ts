@@ -106,7 +106,8 @@ export const runPatrolNow = onCall(callOpts, async (req) => {
   const account = await getAccount(uid, accountId);
   if (!account) throw new HttpsError("not-found", "找不到這個帳號");
   const last = account.lastPatrolAt?.toMillis() ?? 0;
-  if (Date.now() - last < 5 * 60_000) throw new HttpsError("resource-exhausted", "5 分鐘內只能手動巡一次");
+  // 每日搜尋上限與每輪 AI 上限已經保護額度，這裡只防連點
+  if (Date.now() - last < 60_000) throw new HttpsError("resource-exhausted", "1 分鐘內只能手動巡一次");
   await enqueuePatrolNow(uid, accountId);
   return { ok: true };
 });
