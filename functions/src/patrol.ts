@@ -265,7 +265,8 @@ async function filterPosts(
       stats.own++;
       continue;
     }
-    if (post.timestamp && Date.parse(post.timestamp) < minTime) {
+    // 測試模式不限制貼文新舊，自己的舊貼文也能拿來測
+    if (!account.includeOwnPosts && post.timestamp && Date.parse(post.timestamp) < minTime) {
       stats.old++;
       continue;
     }

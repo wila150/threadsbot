@@ -240,7 +240,7 @@ function SettingsForm({ account }: { account: AccountDoc }) {
           <div>
             <div style={{ fontWeight: 600 }}>測試模式：包含自己的貼文</div>
             <div className="small muted">
-              App 通過 Meta 審核前，Threads 只搜得到你自己發的貼文。開啟後海巡會處理自己的貼文、不套用同作者冷卻，方便測試完整流程。正式使用請關閉。
+              App 通過 Meta 審核前，Threads 只搜得到你自己發的貼文。開啟後海巡會處理自己的貼文、不限制貼文新舊、不套用同作者冷卻，方便測試完整流程。正式使用請關閉。
             </div>
           </div>
           <label className="switch">
