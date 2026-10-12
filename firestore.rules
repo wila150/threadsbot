@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// 原則：
+// - 用戶只能讀寫自己的 users/{uid}，而且只能改「設定類」欄位；狀態、方案、用量一律由後端寫。
+// - secrets 任何前端都不能讀寫。
+// - 管理員（custom claim admin=true）可以讀所有用戶資料，但一樣讀不到 secrets。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      // 建立由後端 bootstrapUser 處理
+      allow update: if isOwner(uid)
+        && onlyChanges(['displayName', 'pushEnabled', 'onboarded'])
+        && (!('pushEnabled' in request.resource.data) || request.resource.data.pushEnabled is bool);
+
+      match /accounts/{accountId} {
+        allow read: if isOwner(uid) || isAdmin();
+        // 帳號由 OAuth callback 建立；用戶只能改海巡設定
+        allow update: if isOwner(uid)
+          && onlyChanges([
+            'keywords', 'excludeWords', 'region', 'persona', 'tone', 'model',
+            'maxChars', 'dailyLimit', 'intervalMinutes', 'activeHours', 'mode', 'enabled'
+          ])
+          && request.resource.data.keywords is list
+          && request.resource.data.keywords.size() <= 10
+          && request.resource.data.excludeWords is list
+          && request.resource.data.excludeWords.size() <= 50
+          && request.resource.data.mode in ['draft', 'auto']
+          && request.resource.data.enabled is bool
+          && request.resource.data.dailyLimit is int
+          && request.resource.data.dailyLimit >= 1
+          && request.resource.data.intervalMinutes is int
+          && request.resource.data.intervalMinutes >= 3
+          && request.resource.data.maxChars is int
+          && request.resource.data.maxChars >= 10
+          && request.resource.data.maxChars <= 300;
+
+        match /usage/{date} {
+          allow read: if isOwner(uid) || isAdmin();
+        }
+        match /seen/{postId} {
+          allow read: if isOwner(uid);
+        }
+        match /authors/{author} {
+          allow read: if isOwner(uid);
+        }
+      }
+
+      match /drafts/{draftId} {
+        allow read: if isOwner(uid) || isAdmin();
+        // 用戶可以：編輯待審草稿的回覆內容，或把待審/失敗的草稿標為略過。
+        // 送出一律走後端 sendDraft。
+        allow update: if isOwner(uid)
+          && resource.data.status in ['pending', 'failed']
+          && (
+            (onlyChanges(['replyText', 'editedAt', 'updatedAt'])
+              && request.resource.data.replyText is string
+              && request.resource.data.replyText.size() > 0
+              && request.resource.data.replyText.size() <= 500)
+            || (onlyChanges(['status', 'skippedAt', 'updatedAt'])
+              && request.resource.data.status == 'skipped')
+          );
+      }
+    }
+
+    // 管理後台用 collectionGroup 查所有帳號狀態
+    match /{path=**}/accounts/{accountId} {
+      allow read: if isAdmin();
+    }
+
+    match /plans/{planId} {
+      allow read: if signedIn();
+    }
+
+    match /system/{docId} {
+      allow read: if signedIn();
+    }
+
+    // 只有後端可讀寫
+    match /secrets/{uid} {
+      allow read, write: if false;
+    }
+    match /oauthStates/{state} {
+      allow read, write: if false;
+    }
+  }
+}

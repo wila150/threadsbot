@@ -1,0 +1,19 @@
+{
+  "name": "threadsbot",
+  "private": true,
+  "workspaces": [
+    "functions",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w functions && npm run build -w web",
+    "emulators": "npm run build -w functions && firebase emulators:start",
+    "deploy": "npm run build && firebase deploy",
+    "set-admin": "node scripts/set-admin.mjs",
+    "gen-key": "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\""
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.0.0"
+  }
+}
