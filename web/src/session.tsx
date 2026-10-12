@@ -2,7 +2,7 @@
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { collection, orderBy, query } from "firebase/firestore";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api } from "./api";
+import { api, errMsg } from "./api";
 import { auth, db } from "./firebase";
 import { useDoc, useQuery } from "./hooks";
 import { DEFAULT_PLAN, type AccountDoc, type PlanDoc, type UserDoc } from "./types";
@@ -16,6 +16,9 @@ interface Session {
   plan: PlanDoc;
   systemPaused: boolean;
   ready: boolean;
+  /** 建立帳號失敗時的錯誤訊息 */
+  bootstrapError: string | null;
+  retryBootstrap: () => void;
 }
 
 const Ctx = createContext<Session | null>(null);
@@ -25,6 +28,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(
     () =>
@@ -34,12 +39,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (u) {
           const token = await u.getIdTokenResult();
           setIsAdmin(token.claims.admin === true);
-          try {
-            await api.bootstrapUser();
-          } catch (err) {
-            console.error("bootstrapUser 失敗", err);
-          }
-          setBootstrapped(true);
         } else {
           setIsAdmin(false);
         }
@@ -47,6 +46,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }),
     [],
   );
+
+  // 登入後請後端建立 users/{uid}；失敗時顯示錯誤讓用戶重試
+  useEffect(() => {
+    if (!authUser) return;
+    let alive = true;
+    setBootstrapError(null);
+    api
+      .bootstrapUser()
+      .then(() => alive && setBootstrapped(true))
+      .catch((err) => {
+        console.error("bootstrapUser 失敗", err);
+        if (alive) setBootstrapError(errMsg(err));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [authUser, attempt]);
 
   const uid = authUser && bootstrapped ? authUser.uid : null;
   const { data: user, loading: userLoading } = useDoc<UserDoc>(uid ? `users/${uid}` : null);
@@ -65,7 +81,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     accounts,
     plan: planDoc ? { ...DEFAULT_PLAN, ...planDoc } : DEFAULT_PLAN,
     systemPaused: system?.paused === true,
-    ready: !authLoading && (!authUser || (bootstrapped && !userLoading && !accountsLoading)),
+    ready: !authLoading && (!authUser || !!bootstrapError || (bootstrapped && !userLoading && !accountsLoading)),
+    bootstrapError,
+    retryBootstrap: () => setAttempt((n) => n + 1),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

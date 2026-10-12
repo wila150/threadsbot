@@ -90,9 +90,9 @@ export interface PlanDoc {
 export const DEFAULT_PLAN: PlanDoc = { name: "免費", maxAccounts: 1, dailyLimit: 20, allowAutoSend: false };
 
 export const MODEL_SUGGESTIONS = [
-  "meta/llama-3.3-70b-instruct",
-  "meta/llama-3.1-8b-instruct",
-  "qwen/qwen2.5-7b-instruct",
-  "mistralai/mistral-small-24b-instruct",
-  "deepseek-ai/deepseek-r1",
+  "deepseek-ai/deepseek-v4.1-flash",
+  "z-ai/glm-5.3-flash",
+  "moonshotai/kimi-k2.6",
+  "google/gemma-4-31b-it",
+  "z-ai/glm-5.3",
 ];

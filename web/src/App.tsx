@@ -1,5 +1,7 @@
+import { signOut } from "firebase/auth";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout, MorePage } from "./components/Layout";
+import { auth } from "./firebase";
 import { AccountsPage } from "./pages/Accounts";
 import { AdminPage } from "./pages/Admin";
 import { DraftsPage } from "./pages/Drafts";
@@ -13,11 +15,26 @@ import { StatsPage } from "./pages/Stats";
 import { useSession } from "./session";
 
 export function App() {
-  const { authUser, user, ready, isAdmin } = useSession();
+  const { authUser, user, ready, isAdmin, bootstrapError, retryBootstrap } = useSession();
   const location = useLocation();
 
   if (!ready) return <div className="splash">載入中…</div>;
   if (!authUser) return <LoginPage />;
+  if (bootstrapError) {
+    return (
+      <div className="splash">
+        <div style={{ textAlign: "center", padding: 16 }}>
+          <p>建立帳號失敗：{bootstrapError}</p>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button className="primary" onClick={retryBootstrap}>
+              重試
+            </button>
+            <button onClick={() => signOut(auth)}>登出</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!user) return <div className="splash">建立帳號中…</div>;
 
   // 新用戶先走引導（OAuth 回來會落在 /accounts，讓引導頁接手）
