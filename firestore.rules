@@ -27,8 +27,22 @@ service cloud.firestore {
           && onlyChanges([
             'keywords', 'excludeWords', 'region', 'persona', 'tone', 'model',
             'maxChars', 'dailyLimit', 'intervalMinutes', 'activeHours', 'mode', 'enabled',
-            'includeOwnPosts'
+            'includeOwnPosts', 'maxPostAgeHours', 'authorCooldownHours', 'blockedAuthors',
+            'minTextLength', 'questionsOnly', 'aiExtraRules'
           ])
+          && (!('maxPostAgeHours' in request.resource.data)
+            || (request.resource.data.maxPostAgeHours is int
+              && request.resource.data.maxPostAgeHours >= 1 && request.resource.data.maxPostAgeHours <= 168))
+          && (!('authorCooldownHours' in request.resource.data)
+            || (request.resource.data.authorCooldownHours is int
+              && request.resource.data.authorCooldownHours >= 0 && request.resource.data.authorCooldownHours <= 720))
+          && (!('blockedAuthors' in request.resource.data)
+            || (request.resource.data.blockedAuthors is list && request.resource.data.blockedAuthors.size() <= 200))
+          && (!('minTextLength' in request.resource.data)
+            || (request.resource.data.minTextLength is int
+              && request.resource.data.minTextLength >= 0 && request.resource.data.minTextLength <= 500))
+          && (!('aiExtraRules' in request.resource.data)
+            || (request.resource.data.aiExtraRules is string && request.resource.data.aiExtraRules.size() <= 500))
           && request.resource.data.keywords is list
           && request.resource.data.keywords.size() <= 10
           && request.resource.data.excludeWords is list

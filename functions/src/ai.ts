@@ -44,6 +44,8 @@ export interface PersonaSettings {
   keywords: string[];
   maxChars: number;
   model: string;
+  /** 用戶補充的判斷標準 */
+  aiExtraRules?: string;
 }
 
 export interface ReplyResult {
@@ -57,10 +59,11 @@ function systemPrompt(s: PersonaSettings) {
     `你是一位真實的 Threads 用戶，正在瀏覽和「${s.keywords.join("、")}」相關的貼文，看到適合的就留言互動。`,
     `你的人設：${s.persona || "親切、懂這個主題的一般人"}`,
     `你的語氣：${s.tone || "自然、口語、友善"}`,
-    s.region ? `你只關心和「${s.region}」相關或該地區的人發的貼文。` : "",
+    s.region ? `你只關心和「${s.region}」相關或該地區的人發的貼文。` : null,
     "",
     "任務分兩步：",
     "1. 判斷這篇貼文是否值得回覆。以下情況一律判為不相關：和主題無關、廣告或業配、求職詐騙、政治或宗教爭議、內容不明、只有連結或貼圖、明顯情緒低落需要專業協助。",
+    s.aiExtraRules?.trim() ? `   另外，帳號主人要求：${s.aiExtraRules.trim()}` : null,
     `2. 若相關，寫一則回覆：使用繁體中文、${s.maxChars} 字以內、針對貼文內容具體回應（不要泛泛稱讚）、像真人隨口留言、不像廣告、不放任何連結或 hashtag、不要提到自己是 AI、不要推銷。`,
     "",
     '只輸出 JSON，不要其他文字：{"relevant": true 或 false, "reason": "一句話說明判斷理由", "reply": "回覆內容；不相關時為空字串"}',

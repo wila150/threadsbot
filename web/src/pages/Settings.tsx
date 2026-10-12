@@ -24,6 +24,12 @@ function pickSettings(a: AccountDoc): AccountSettings {
     mode: a.mode,
     enabled: a.enabled,
     includeOwnPosts: a.includeOwnPosts ?? false,
+    maxPostAgeHours: a.maxPostAgeHours ?? 48,
+    authorCooldownHours: a.authorCooldownHours ?? 24,
+    blockedAuthors: a.blockedAuthors ?? [],
+    minTextLength: a.minTextLength ?? 0,
+    questionsOnly: a.questionsOnly ?? false,
+    aiExtraRules: a.aiExtraRules ?? "",
   };
 }
 
@@ -134,6 +140,87 @@ function SettingsForm({ account }: { account: AccountDoc }) {
           <span>地區</span>
           <input value={form.region} onChange={(e) => set("region", e.target.value)} placeholder="例如：台灣、台中" />
           <small>Threads 搜尋沒有地區篩選，這個設定會讓 AI 判斷相關性時優先考慮該地區。</small>
+        </label>
+      </div>
+
+      <h2>過濾規則</h2>
+      <div className="card">
+        <div className="two-col">
+          <label className="field">
+            <span>只處理多新的貼文</span>
+            <select value={form.maxPostAgeHours} onChange={(e) => set("maxPostAgeHours", Number(e.target.value))}>
+              {[
+                [6, "6 小時內"],
+                [12, "12 小時內"],
+                [24, "1 天內"],
+                [48, "2 天內"],
+                [72, "3 天內"],
+                [168, "7 天內"],
+              ].map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>同作者冷卻</span>
+            <select value={form.authorCooldownHours} onChange={(e) => set("authorCooldownHours", Number(e.target.value))}>
+              {[
+                [0, "不限制"],
+                [6, "6 小時"],
+                [12, "12 小時"],
+                [24, "1 天"],
+                [72, "3 天"],
+                [168, "7 天"],
+              ].map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <small>同一個人在這段時間內只回一次</small>
+          </label>
+        </div>
+        <label className="field">
+          <span>最短字數</span>
+          <input
+            type="number"
+            min={0}
+            max={500}
+            value={form.minTextLength}
+            onChange={(e) => set("minTextLength", Math.max(0, Math.round(Number(e.target.value) || 0)))}
+          />
+          <small>比這更短的貼文不處理，也能省 AI 點數；0 表示不限制</small>
+        </label>
+        <label className="field">
+          <span>封鎖作者</span>
+          <ListInput
+            value={form.blockedAuthors ?? []}
+            onChange={(v) => set("blockedAuthors", v.map((a) => a.replace(/^@/, "")))}
+            placeholder="輸入 Threads 帳號，按 Enter 新增"
+            max={200}
+          />
+          <small>這些帳號的貼文永遠不回</small>
+        </label>
+        <div className="spread field">
+          <div>
+            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>只回問句</div>
+            <div className="small muted">只處理有問號或「請問」「推薦」「有沒有」這類求助語氣的貼文</div>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={!!form.questionsOnly} onChange={(e) => set("questionsOnly", e.target.checked)} />
+          </label>
+        </div>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span>AI 判斷標準（補充）</span>
+          <textarea
+            value={form.aiExtraRules}
+            onChange={(e) => set("aiExtraRules", e.target.value)}
+            placeholder="例如：不回抱怨文、不回已經有很多人回覆的問題、只回想買東西的人"
+            maxLength={500}
+          />
+          <small>寫給 AI 看的規則，判斷要不要回時會參考；可以用「試產一則」測試效果</small>
         </label>
       </div>
 

@@ -155,16 +155,19 @@ function PatrolSummary({ account }: { account: AccountDoc }) {
 
 const FILTER_LABELS = {
   own: "自己發的（可在海巡設定開啟測試模式）",
-  old: "超過 48 小時",
+  old: "超過設定的新舊範圍",
   excluded: "含排除詞",
   seen: "之前已處理過",
-  cooldown: "同作者 24 小時內已回過",
+  cooldown: "同作者冷卻中",
+  blocked: "封鎖的作者",
+  short: "字數太少",
+  notQuestion: "不是問句",
 } as const;
 
 function FilteredReasons({ s }: { s: NonNullable<AccountDoc["lastPatrolSummary"]> }) {
   const parts = s.filtered
     ? (Object.keys(FILTER_LABELS) as (keyof typeof FILTER_LABELS)[])
-        .filter((k) => s.filtered![k] > 0)
+        .filter((k) => (s.filtered![k] ?? 0) > 0)
         .map((k) => `${FILTER_LABELS[k]} ${s.filtered![k]} 篇`)
     : [];
   return (

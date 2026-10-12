@@ -29,6 +29,13 @@ export interface AccountSettings {
   mode: "draft" | "auto";
   enabled: boolean;
   includeOwnPosts?: boolean;
+  maxPostAgeHours?: number;
+  /** 0 表示不限制 */
+  authorCooldownHours?: number;
+  blockedAuthors?: string[];
+  minTextLength?: number;
+  questionsOnly?: boolean;
+  aiExtraRules?: string;
 }
 
 export interface AccountDoc extends AccountSettings {
@@ -50,7 +57,16 @@ export interface AccountDoc extends AccountSettings {
     irrelevant: number;
     drafts: number;
     zeroKeywords: string[];
-    filtered?: { own: number; old: number; excluded: number; seen: number; cooldown: number };
+    filtered?: {
+      own: number;
+      old: number;
+      excluded: number;
+      seen: number;
+      cooldown: number;
+      blocked?: number;
+      short?: number;
+      notQuestion?: number;
+    };
   };
   lastSentAt: Timestamp | null;
 }

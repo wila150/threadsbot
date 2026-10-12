@@ -24,7 +24,7 @@ export interface PatrolSummary {
   drafts: number;
   zeroKeywords: string[];
   /** 各過濾原因擋掉的篇數 */
-  filtered?: { own: number; old: number; excluded: number; seen: number; cooldown: number };
+  filtered?: { own: number; old: number; excluded: number; seen: number; cooldown: number; blocked: number; short: number; notQuestion: number };
 }
 
 export type AccountStatus = "ok" | "throttled" | "reauth" | "suspended";
@@ -50,6 +50,15 @@ export interface AccountDoc {
   enabled: boolean;
   /** 測試模式：也處理自己發的貼文（App 審核前搜尋只找得到自己的貼文） */
   includeOwnPosts?: boolean;
+  // 過濾規則（舊帳號可能沒有這些欄位，用 config 的預設值）
+  maxPostAgeHours?: number;
+  /** 0 表示不限制 */
+  authorCooldownHours?: number;
+  blockedAuthors?: string[];
+  minTextLength?: number;
+  questionsOnly?: boolean;
+  /** 補充給 AI 的判斷標準，例如「不回抱怨文」 */
+  aiExtraRules?: string;
   // 狀態（只有後端寫）
   status: AccountStatus;
   statusReason: string | null;

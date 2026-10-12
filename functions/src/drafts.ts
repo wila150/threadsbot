@@ -73,6 +73,7 @@ export async function testGenerate(uid: string, settings: Partial<PersonaSetting
     keywords: Array.isArray(settings.keywords) ? settings.keywords.map(String).slice(0, 10) : [],
     maxChars: Math.min(300, Math.max(10, Number(settings.maxChars) || 50)),
     model: String(settings.model || ""),
+    aiExtraRules: String(settings.aiExtraRules ?? "").slice(0, 500),
   };
   if (!s.model) throw new HttpsError("invalid-argument", "請選擇模型");
   const text = (postText ?? "").trim().slice(0, 1000) || SAMPLE_POST;

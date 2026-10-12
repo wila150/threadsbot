@@ -28,6 +28,7 @@ export const MAX_AI_CALLS_PER_RUN = 6;
 export const AI_RETRY_AFTER_MINUTES = 60;
 /** 同一位作者多久內不重複回 */
 export const AUTHOR_COOLDOWN_HOURS = 24;
+/** 帳號沒設定時的預設值，用戶可在海巡設定調整 */
 /** 只處理這麼新的貼文 */
 export const MAX_POST_AGE_HOURS = 48;
 /** 被限流時暫停多久 */

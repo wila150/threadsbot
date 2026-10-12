@@ -140,7 +140,7 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   }
 
   // 2. 過濾與去重
-  const filtered: FilterStats = { own: 0, old: 0, excluded: 0, seen: 0, cooldown: 0 };
+  const filtered: FilterStats = { own: 0, old: 0, excluded: 0, seen: 0, cooldown: 0, blocked: 0, short: 0, notQuestion: 0 };
   const candidates = await filterPosts(uid, accountId, account, found, filtered);
 
   // 3. AI 判斷與產生
@@ -242,7 +242,13 @@ export interface FilterStats {
   excluded: number;
   seen: number;
   cooldown: number;
+  blocked: number;
+  short: number;
+  notQuestion: number;
 }
+
+/** 問句或求助語氣 */
+const QUESTION_PATTERN = /[?？]|請問|推薦|有沒有|有人|怎麼|如何|哪裡|哪家|哪個|求助|求推|想問|該不該|好不好|值得嗎/;
 
 async function filterPosts(
   uid: string,
@@ -251,9 +257,11 @@ async function filterPosts(
   found: { post: ThreadsPost; keyword: string }[],
   stats: FilterStats,
 ) {
-  const minTime = Date.now() - MAX_POST_AGE_HOURS * 3600_000;
+  const minTime = Date.now() - (account.maxPostAgeHours ?? MAX_POST_AGE_HOURS) * 3600_000;
   const exclude = account.excludeWords.map((w) => w.toLowerCase()).filter(Boolean);
   const own = account.username.toLowerCase();
+  const blocked = new Set((account.blockedAuthors ?? []).map((a) => a.replace(/^@/, "").toLowerCase()));
+  const minLength = account.minTextLength ?? 0;
 
   // 同一輪內去重 + 基本過濾
   const unique = new Map<string, { post: ThreadsPost; keyword: string }>();
@@ -270,9 +278,21 @@ async function filterPosts(
       stats.old++;
       continue;
     }
+    if (blocked.has((post.username ?? "").toLowerCase())) {
+      stats.blocked++;
+      continue;
+    }
+    if (Array.from(text).length < minLength) {
+      stats.short++;
+      continue;
+    }
     const lower = text.toLowerCase();
     if (exclude.some((w) => lower.includes(w))) {
       stats.excluded++;
+      continue;
+    }
+    if (account.questionsOnly && !QUESTION_PATTERN.test(text)) {
+      stats.notQuestion++;
       continue;
     }
     unique.set(post.id, item);
@@ -285,13 +305,14 @@ async function filterPosts(
   const fresh = items.filter((_, i) => !seenSnaps[i].exists);
   stats.seen += items.length - fresh.length;
 
-  // 測試模式下貼文多半都是自己的，不套用作者冷卻
-  if (account.includeOwnPosts) return fresh;
+  // 測試模式下貼文多半都是自己的，不套用作者冷卻；冷卻設為 0 也不限制
+  const cooldownHours = account.authorCooldownHours ?? AUTHOR_COOLDOWN_HOURS;
+  if (account.includeOwnPosts || cooldownHours <= 0) return fresh;
 
   // 作者冷卻：同一位作者短時間內不重複回
   const authors = [...new Set(fresh.map((i) => i.post.username ?? ""))];
   const authorSnaps = authors.length ? await db.getAll(...authors.map((a) => refs.author(uid, accountId, a))) : [];
-  const cooldown = Date.now() - AUTHOR_COOLDOWN_HOURS * 3600_000;
+  const cooldown = Date.now() - cooldownHours * 3600_000;
   const cooling = new Set(
     authors.filter((_, i) => {
       const d = authorSnaps[i].data();
