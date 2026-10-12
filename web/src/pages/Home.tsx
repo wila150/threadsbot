@@ -96,6 +96,7 @@ function AccountRow({ account, usage, pendingCount }: { account: AccountDoc; usa
       <div className="small muted" style={{ marginTop: 8 }}>
         今日搜尋 {usage?.searches ?? 0} 次 · 草稿 {usage?.drafts ?? 0} · 送出 {usage?.sent ?? 0} · 待審 {pendingCount}
       </div>
+      <PatrolSummary account={account} />
       {searchCapped && <div className="banner warn small" style={{ marginTop: 8 }}>今日 Threads 搜尋次數已用完，明天自動恢復。</div>}
       {account.status === "reauth" && (
         <div className="small" style={{ marginTop: 8 }}>
@@ -122,6 +123,34 @@ function AccountRow({ account, usage, pendingCount }: { account: AccountDoc; usa
         </button>
       </div>
       {msg && <p className="small muted" style={{ marginTop: 8 }}>{msg}</p>}
+    </div>
+  );
+}
+
+/** 上次海巡的明細：搜到幾篇、過濾後剩幾篇、AI 判斷、產生幾則草稿 */
+function PatrolSummary({ account }: { account: AccountDoc }) {
+  const s = account.lastPatrolSummary;
+  if (!s) return null;
+  return (
+    <div className="card" style={{ marginTop: 10, background: "var(--bg-soft)", padding: 12 }}>
+      <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>
+        上次海巡（{fmtRelative(account.lastPatrolAt)}）
+      </div>
+      <div className="small">
+        搜尋 {s.searches} 次 → Threads 回傳 {s.fetched} 篇 → 新貼文 {s.candidates} 篇 → AI 判斷 {s.aiCalls} 篇（不相關{" "}
+        {s.irrelevant}）→ 產生草稿 <b>{s.drafts}</b> 則
+      </div>
+      {s.searches > 0 && s.fetched === 0 && (
+        <p className="small muted" style={{ margin: "6px 0 0" }}>
+          所有關鍵字都搜不到貼文。App 通過 Meta 審核（threads_keyword_search）之前，Threads 只會搜尋你自己發的貼文。
+        </p>
+      )}
+      {s.fetched > 0 && s.zeroKeywords.length > 0 && (
+        <p className="small muted" style={{ margin: "6px 0 0" }}>沒有結果的關鍵字：{s.zeroKeywords.join("、")}</p>
+      )}
+      {s.fetched > 0 && s.candidates === 0 && (
+        <p className="small muted" style={{ margin: "6px 0 0" }}>搜到的貼文都看過了、太舊、含排除詞或是自己發的。</p>
+      )}
     </div>
   );
 }

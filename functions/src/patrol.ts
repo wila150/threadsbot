@@ -80,10 +80,21 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   ]);
   const user = userSnap.data() as UserDoc | undefined;
   const account = accountSnap.data() as AccountDoc | undefined;
-  if (!user || !account || user.disabled) return;
-  if (!readyToPatrol(account)) return;
+  const skip = (reason: string, extra: Record<string, unknown> = {}) =>
+    logger.info(`海巡跳過：${reason}`, { uid, accountId, ...extra });
+  if (!user || !account) return skip("找不到用戶或帳號");
+  if (user.disabled) return skip("用戶已停用");
+  if (!readyToPatrol(account)) {
+    return skip("帳號不在可巡邏狀態", {
+      enabled: account.enabled,
+      keywords: account.keywords?.length ?? 0,
+      status: account.status,
+      activeHours: account.activeHours,
+    });
+  }
   const system = await getSystem();
-  if (system.paused || !aiAvailable(system)) return;
+  if (system.paused) return skip("系統已暫停");
+  if (!aiAvailable(system)) return skip("共用 AI key 異常", { aiStatus: system.aiStatus });
 
   // 限流期滿，恢復正常
   if (account.status === "throttled") {
@@ -98,22 +109,25 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   let searchBudget = THREADS_SEARCH_DAILY_CAP - ((usage.searches as number) ?? 0);
   if (draftBudget <= 0 || searchBudget <= 0) {
     await bumpUsage(uid, accountId, {});
-    return;
+    return skip("今日額度已用完", { drafts: usage.drafts, searches: usage.searches, limit });
   }
 
   const tokenEnc = secrets.accounts?.[accountId]?.token;
-  if (!tokenEnc) return;
+  if (!tokenEnc) return skip("找不到 Threads token");
   const token = decrypt(tokenEnc);
   const apiKey = NVIDIA_API_KEY.value();
 
   // 1. 搜尋
   const found: { post: ThreadsPost; keyword: string }[] = [];
   let searches = 0;
+  const zeroResultKeywords: string[] = [];
   for (const keyword of shuffle(account.keywords)) {
     if (searchBudget-- <= 0) break;
     try {
       const posts = await keywordSearch(token, keyword);
       searches++;
+      logger.info("關鍵字搜尋", { uid, accountId, keyword, results: posts.length });
+      if (!posts.length) zeroResultKeywords.push(keyword);
       for (const post of posts) found.push({ post, keyword });
     } catch (err) {
       searches++;
@@ -185,8 +199,30 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   await Promise.all([
     bumpUsage(uid, accountId, { searches, found: candidates.length, drafts, irrelevant, aiCalls }),
     refs.usage(uid, accountId).set({ lastPatrolAt: FieldValue.serverTimestamp() }, { merge: true }),
-    accountRef.update({ lastPatrolAt: FieldValue.serverTimestamp() }),
+    accountRef.update({
+      lastPatrolAt: FieldValue.serverTimestamp(),
+      lastPatrolSummary: {
+        searches,
+        fetched: found.length,
+        candidates: candidates.length,
+        aiCalls,
+        irrelevant,
+        drafts,
+        zeroKeywords: zeroResultKeywords,
+      },
+    }),
   ]);
+
+  logger.info("海巡完成", {
+    uid,
+    accountId,
+    searches,
+    fetched: found.length,
+    candidates: candidates.length,
+    aiCalls,
+    irrelevant,
+    drafts,
+  });
 
   // 4. 依模式處理
   if (!newDraftIds.length) return;

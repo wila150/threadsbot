@@ -41,6 +41,15 @@ export interface AccountDoc extends AccountSettings {
   limitOverride: number | null;
   tokenExpiresAt: Timestamp;
   lastPatrolAt: Timestamp | null;
+  lastPatrolSummary?: {
+    searches: number;
+    fetched: number;
+    candidates: number;
+    aiCalls: number;
+    irrelevant: number;
+    drafts: number;
+    zeroKeywords: string[];
+  };
   lastSentAt: Timestamp | null;
 }
 

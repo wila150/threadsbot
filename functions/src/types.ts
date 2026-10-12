@@ -13,6 +13,18 @@ export interface UserDoc {
   fcmTokens: string[];
 }
 
+export interface PatrolSummary {
+  searches: number;
+  /** Threads 回傳的貼文數 */
+  fetched: number;
+  /** 過濾去重後的新貼文數 */
+  candidates: number;
+  aiCalls: number;
+  irrelevant: number;
+  drafts: number;
+  zeroKeywords: string[];
+}
+
 export type AccountStatus = "ok" | "throttled" | "reauth" | "suspended";
 export type PatrolMode = "draft" | "auto";
 
@@ -43,6 +55,8 @@ export interface AccountDoc {
   tokenExpiresAt: Timestamp;
   nextSendAt: Timestamp | null;
   lastPatrolAt: Timestamp | null;
+  /** 上一輪海巡的結果，給首頁顯示 */
+  lastPatrolSummary?: PatrolSummary;
   lastSentAt: Timestamp | null;
   createdAt: Timestamp;
 }
