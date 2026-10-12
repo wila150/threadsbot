@@ -2,24 +2,27 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import { AiError, generateReply, type PersonaSettings } from "./ai";
-import { decrypt } from "./crypto";
-import { getAccount, getDraft, getSecrets, getUser, refs } from "./db";
+import { NVIDIA_API_KEY } from "./config";
+import { aiAvailable, getAccount, getDraft, getSystem, getUser, refs } from "./db";
 import { scheduleSend } from "./send";
-import { handleAiError } from "./status";
+import { handleAiError, markAiOk } from "./status";
 
-async function requireApiKey(uid: string) {
-  const [user, secrets] = await Promise.all([getUser(uid), getSecrets(uid)]);
+async function requireUser(uid: string) {
+  const user = await getUser(uid);
   if (!user || user.disabled) throw new HttpsError("permission-denied", "帳號已停用");
-  if (!secrets.nvidiaKey) throw new HttpsError("failed-precondition", "請先填入 NVIDIA API key");
-  return decrypt(secrets.nvidiaKey);
 }
 
-async function runAi(uid: string, apiKey: string, settings: PersonaSettings, post: { text: string; author: string }) {
+/** 用共用 key 呼叫 AI；出問題時更新全系統的 AI 狀態 */
+async function runAi(settings: PersonaSettings, post: { text: string; author: string }) {
+  const system = await getSystem();
+  if (!aiAvailable(system)) throw new HttpsError("unavailable", "AI 服務暫時無法使用，請稍後再試");
   try {
-    return await generateReply(apiKey, settings, post);
+    const result = await generateReply(NVIDIA_API_KEY.value(), settings, post);
+    await markAiOk(system.aiStatus);
+    return result;
   } catch (err) {
     if (err instanceof AiError) {
-      await handleAiError(uid, err);
+      await handleAiError(err);
       throw new HttpsError("unavailable", err.message);
     }
     throw err;
@@ -44,8 +47,8 @@ export async function regenerateDraft(uid: string, draftId: string) {
   if (!["pending", "failed"].includes(draft.status)) throw new HttpsError("failed-precondition", "這則草稿已處理過");
   const account = await getAccount(uid, draft.accountId);
   if (!account) throw new HttpsError("failed-precondition", "帳號已解除綁定");
-  const apiKey = await requireApiKey(uid);
-  const result = await runAi(uid, apiKey, account, { text: draft.postText, author: draft.postAuthor });
+  await requireUser(uid);
+  const result = await runAi(account, { text: draft.postText, author: draft.postAuthor });
   if (!result.reply) throw new HttpsError("failed-precondition", `AI 判斷這篇不適合回覆：${result.reason}`);
   await refs.draft(uid, draftId).update({
     replyText: result.reply,
@@ -62,7 +65,7 @@ const SAMPLE_POST = "最近想找台中好吃的早午餐，有沒有人推薦�
 
 /** 海巡設定頁的「試產一則」：用尚未儲存的設定預覽 AI 語氣 */
 export async function testGenerate(uid: string, settings: Partial<PersonaSettings>, postText?: string) {
-  const apiKey = await requireApiKey(uid);
+  await requireUser(uid);
   const s: PersonaSettings = {
     persona: String(settings.persona ?? "").slice(0, 500),
     tone: String(settings.tone ?? "").slice(0, 200),
@@ -73,6 +76,6 @@ export async function testGenerate(uid: string, settings: Partial<PersonaSetting
   };
   if (!s.model) throw new HttpsError("invalid-argument", "請選擇模型");
   const text = (postText ?? "").trim().slice(0, 1000) || SAMPLE_POST;
-  const result = await runAi(uid, apiKey, s, { text, author: "sample_user" });
+  const result = await runAi(s, { text, author: "sample_user" });
   return { postText: text, ...result };
 }

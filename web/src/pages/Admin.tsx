@@ -9,7 +9,7 @@ import type { AccountDoc, PlanDoc, UserDoc } from "../types";
 
 /** 管理後台：看得到狀態，碰不到 token 與 key */
 export function AdminPage() {
-  const { systemPaused } = useSession();
+  const { systemPaused, aiStatus } = useSession();
   const { data: users } = useQuery<UserDoc>(query(collection(db, "users")), "admin-users");
   const { data: accounts } = useQuery<AccountDoc>(query(collectionGroup(db, "accounts")), "admin-accounts");
   const { data: plans } = useQuery<PlanDoc>(query(collection(db, "plans")), "admin-plans");
@@ -49,6 +49,18 @@ export function AdminPage() {
         </div>
       </div>
 
+      <div className="card">
+        <div className="spread">
+          <div>
+            <div style={{ fontWeight: 600 }}>共用 AI key</div>
+            <div className="small muted">
+              {aiStatus === "ok" ? "正常" : `${aiStatusLabel[aiStatus]}；每小時自動重試，或更新 NVIDIA_API_KEY 後重新部署`}
+            </div>
+          </div>
+          <span className={`pill ${aiStatus === "ok" ? "ok" : "bad"}`}>{aiStatus === "ok" ? "正常" : "異常"}</span>
+        </div>
+      </div>
+
       <h2>系統狀態</h2>
       <div className="grid-stats">
         <div className="card stat">
@@ -76,7 +88,6 @@ export function AdminPage() {
             <tr>
               <th>用戶</th>
               <th>方案</th>
-              <th>AI</th>
               <th>Threads 帳號</th>
               <th></th>
             </tr>
@@ -101,7 +112,6 @@ export function AdminPage() {
                     ))}
                   </select>
                 </td>
-                <td className="small">{aiStatusLabel[u.aiStatus]}</td>
                 <td>
                   {accounts
                     .filter((a) => a.uid === u.id)

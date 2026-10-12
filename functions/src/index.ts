@@ -6,7 +6,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import * as accounts from "./accounts";
 import * as admin from "./admin";
-import { ALL_SECRETS, ENCRYPTION_KEY, REGION, TIMEZONE } from "./config";
+import { ALL_SECRETS, ENCRYPTION_KEY, NVIDIA_API_KEY, REGION, TIMEZONE } from "./config";
 import { getAccount, refs } from "./db";
 import * as drafts from "./drafts";
 import * as maintenance from "./maintenance";
@@ -76,8 +76,6 @@ export const unlinkAccount = onCall(callOpts, async (req) => {
   return { ok: true };
 });
 
-export const saveNvidiaKey = onCall(callOpts, (req) => accounts.saveNvidiaKey(uidOf(req), str(req.data?.key, "key")));
-
 export const registerPushToken = onCall(callOpts, async (req) => {
   const uid = uidOf(req);
   const token = str(req.data?.token, "token");
@@ -145,11 +143,12 @@ export const patrolScheduler = onSchedule({ schedule: "every 10 minutes", timeZo
 
 export const patrolAccountTask = onTaskDispatched<PatrolTask>(
   {
-    secrets: [ENCRYPTION_KEY],
+    secrets: [ENCRYPTION_KEY, NVIDIA_API_KEY],
     timeoutSeconds: 300,
     memory: "512MiB",
     retryConfig: { maxAttempts: 2, minBackoffSeconds: 60 },
-    rateLimits: { maxConcurrentDispatches: 20 },
+    // 共用 AI key 每模型每分鐘 40 次，同時只跑少量帳號
+    rateLimits: { maxConcurrentDispatches: 4 },
   },
   async (req) => {
     await patrolAccount(req.data);

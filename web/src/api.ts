@@ -11,7 +11,6 @@ export const api = {
   bootstrapUser: fn<void, { ok: boolean }>("bootstrapUser"),
   getThreadsAuthUrl: fn<void, { url: string }>("getThreadsAuthUrl"),
   unlinkAccount: fn<{ accountId: string }, { ok: boolean }>("unlinkAccount"),
-  saveNvidiaKey: fn<{ key: string }, { last4: string }>("saveNvidiaKey"),
   registerPushToken: fn<{ token: string }, { ok: boolean }>("registerPushToken"),
   deleteMyData: fn<void, { ok: boolean }>("deleteMyData"),
   sendDraft: fn<{ draftId: string }, { status?: string; failReason: string | null; immediate: boolean; sendAt: string }>(

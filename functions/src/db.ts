@@ -1,7 +1,15 @@
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { TIMEZONE } from "./config";
-import { DEFAULT_PLAN, type AccountDoc, type DraftDoc, type PlanDoc, type SecretsDoc, type UserDoc } from "./types";
+import { AI_RETRY_AFTER_MINUTES, TIMEZONE } from "./config";
+import {
+  DEFAULT_PLAN,
+  type AccountDoc,
+  type DraftDoc,
+  type PlanDoc,
+  type SecretsDoc,
+  type SystemDoc,
+  type UserDoc,
+} from "./types";
 
 initializeApp();
 export const db = getFirestore();
@@ -40,8 +48,17 @@ export async function getPlan(planId: string): Promise<PlanDoc> {
   const snap = await refs.plan(planId).get();
   return snap.exists ? { ...DEFAULT_PLAN, ...(snap.data() as PlanDoc) } : DEFAULT_PLAN;
 }
+export async function getSystem(): Promise<SystemDoc> {
+  return ((await refs.system().get()).data() ?? {}) as SystemDoc;
+}
 export async function isSystemPaused() {
-  return (await refs.system().get()).data()?.paused === true;
+  return (await getSystem()).paused === true;
+}
+/** 共用 AI key 可不可以用：正常，或出問題已超過重試間隔 */
+export function aiAvailable(system: SystemDoc): boolean {
+  if (!system.aiStatus || system.aiStatus === "ok") return true;
+  const at = system.aiStatusAt?.toMillis() ?? 0;
+  return Date.now() - at > AI_RETRY_AFTER_MINUTES * 60_000;
 }
 
 /** 台北時間的日期字串，例如 2026-10-12 */

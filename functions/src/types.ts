@@ -1,6 +1,6 @@
 import type { Timestamp } from "firebase-admin/firestore";
 
-export type AiStatus = "ok" | "no_key" | "no_credits" | "invalid_key";
+export type AiStatus = "ok" | "no_credits" | "invalid_key";
 
 export interface UserDoc {
   displayName: string;
@@ -9,8 +9,6 @@ export interface UserDoc {
   createdAt: Timestamp;
   disabled: boolean;
   onboarded: boolean;
-  aiStatus: AiStatus;
-  nvidiaKeyLast4: string | null;
   pushEnabled: boolean;
   fcmTokens: string[];
 }
@@ -73,6 +71,13 @@ export interface DraftDoc {
   sentAt: Timestamp | null;
 }
 
+export interface SystemDoc {
+  paused?: boolean;
+  aiStatus?: AiStatus;
+  aiStatusAt?: Timestamp;
+  aiStatusReason?: string;
+}
+
 export interface PlanDoc {
   name: string;
   maxAccounts: number;
@@ -81,7 +86,6 @@ export interface PlanDoc {
 }
 
 export interface SecretsDoc {
-  nvidiaKey?: string;
   accounts?: Record<string, { token: string; expiresAt: Timestamp; issuedAt: Timestamp }>;
 }
 

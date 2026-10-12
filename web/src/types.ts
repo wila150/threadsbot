@@ -1,6 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type AiStatus = "ok" | "no_key" | "no_credits" | "invalid_key";
+export type AiStatus = "ok" | "no_credits" | "invalid_key";
 
 export interface UserDoc {
   displayName: string;
@@ -8,8 +8,6 @@ export interface UserDoc {
   plan: string;
   disabled: boolean;
   onboarded: boolean;
-  aiStatus: AiStatus;
-  nvidiaKeyLast4: string | null;
   pushEnabled: boolean;
   fcmTokens: string[];
   createdAt?: Timestamp;

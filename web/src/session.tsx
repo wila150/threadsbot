@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { api, errMsg } from "./api";
 import { auth, db } from "./firebase";
 import { useDoc, useQuery } from "./hooks";
-import { DEFAULT_PLAN, type AccountDoc, type PlanDoc, type UserDoc } from "./types";
+import { DEFAULT_PLAN, type AccountDoc, type AiStatus, type PlanDoc, type UserDoc } from "./types";
 
 interface Session {
   authUser: User | null;
@@ -15,6 +15,8 @@ interface Session {
   accounts: AccountDoc[];
   plan: PlanDoc;
   systemPaused: boolean;
+  /** 全系統共用 AI key 的狀態 */
+  aiStatus: AiStatus;
   ready: boolean;
   /** 建立帳號失敗時的錯誤訊息 */
   bootstrapError: string | null;
@@ -71,7 +73,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     `accounts-${uid}`,
   );
   const { data: planDoc } = useDoc<PlanDoc>(user ? `plans/${user.plan}` : null);
-  const { data: system } = useDoc<{ paused?: boolean }>(uid ? "system/config" : null);
+  const { data: system } = useDoc<{ paused?: boolean; aiStatus?: AiStatus }>(uid ? "system/config" : null);
 
   const value: Session = {
     authUser,
@@ -81,6 +83,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     accounts,
     plan: planDoc ? { ...DEFAULT_PLAN, ...planDoc } : DEFAULT_PLAN,
     systemPaused: system?.paused === true,
+    aiStatus: system?.aiStatus ?? "ok",
     ready: !authLoading && (!authUser || !!bootstrapError || (bootstrapped && !userLoading && !accountsLoading)),
     bootstrapError,
     retryBootstrap: () => setAttempt((n) => n + 1),

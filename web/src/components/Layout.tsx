@@ -21,7 +21,7 @@ const SIDE_EXTRA = [
 ];
 
 export function Layout() {
-  const { user, isAdmin, systemPaused } = useSession();
+  const { user, isAdmin, systemPaused, aiStatus } = useSession();
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,10 +56,8 @@ export function Layout() {
       <main className="content">
         {systemPaused && <div className="banner bad">系統維護中，海巡暫停。</div>}
         {user?.disabled && <div className="banner bad">你的帳號已被暫停，如有疑問請聯絡管理員。</div>}
-        {user && user.aiStatus !== "ok" && (
-          <div className="banner warn">
-            AI：{aiStatusLabel[user.aiStatus]}。<NavLink to="/profile">前往設定</NavLink>
-          </div>
+        {aiStatus !== "ok" && (
+          <div className="banner warn">AI 服務暫時無法使用（{aiStatusLabel[aiStatus]}），恢復後海巡會自動繼續。</div>
         )}
         <Outlet />
       </main>

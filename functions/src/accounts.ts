@@ -6,7 +6,6 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { APP_URL, DEFAULT_MODEL } from "./config";
 import { encrypt } from "./crypto";
 import { db, getPlan, getUser, refs } from "./db";
-import { validateKey, AiError } from "./ai";
 import { authorizeUrl, exchangeCode, getMe } from "./threads";
 import type { AccountDoc, UserDoc } from "./types";
 
@@ -23,8 +22,6 @@ export async function bootstrapUser(uid: string) {
     plan: "free",
     disabled: false,
     onboarded: false,
-    aiStatus: "no_key",
-    nvidiaKeyLast4: null,
     pushEnabled: true,
     fcmTokens: [],
   };
@@ -123,25 +120,6 @@ export async function unlinkAccount(uid: string, accountId: string) {
   // 先刪 token，再刪帳號資料（含 usage／seen／authors）。草稿保留作為歷史紀錄。
   await refs.secrets(uid).set({ accounts: { [accountId]: FieldValue.delete() } }, { merge: true });
   await db.recursiveDelete(ref);
-}
-
-// ---------- NVIDIA key ----------
-
-export async function saveNvidiaKey(uid: string, key: string) {
-  const trimmed = key.trim();
-  if (!/^[\w-]{20,}$/.test(trimmed)) throw new HttpsError("invalid-argument", "key 格式看起來不對");
-  try {
-    await validateKey(trimmed, DEFAULT_MODEL);
-  } catch (err) {
-    if (err instanceof AiError && err.kind === "invalid_key") throw new HttpsError("invalid-argument", "這組 key 無效");
-    if (err instanceof AiError && err.kind === "no_credits") {
-      throw new HttpsError("failed-precondition", "這組 key 已經沒有點數了");
-    }
-    // 其他錯誤（例如暫時連不上）不擋，照樣存
-  }
-  await refs.secrets(uid).set({ nvidiaKey: encrypt(trimmed) }, { merge: true });
-  await refs.user(uid).update({ nvidiaKeyLast4: trimmed.slice(-4), aiStatus: "ok" });
-  return { last4: trimmed.slice(-4) };
 }
 
 /** 刪除自己的所有資料（含 token），並刪除登入帳號 */

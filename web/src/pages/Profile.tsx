@@ -2,15 +2,12 @@ import { signOut } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { api, errMsg } from "../api";
-import { NvidiaKeyForm, NvidiaKeyGuide } from "../components/NvidiaKeyForm";
 import { auth, db } from "../firebase";
-import { aiStatusLabel } from "../format";
 import { enablePush } from "../push";
 import { useSession } from "../session";
 
 export function ProfilePage() {
   const { user, plan, accounts } = useSession();
-  const [changingKey, setChangingKey] = useState(false);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   if (!user) return null;
   const pushOn = user.pushEnabled && user.fcmTokens.length > 0;
@@ -50,26 +47,6 @@ export function ProfilePage() {
       <div className="card">
         <div className="small muted">登入身分</div>
         <div style={{ fontWeight: 600 }}>{user.email || user.displayName}</div>
-      </div>
-
-      <h2>NVIDIA API key</h2>
-      <div className="card stack">
-        <div className="spread">
-          <div>
-            {user.nvidiaKeyLast4 ? <>目前的 key：••••{user.nvidiaKeyLast4}</> : <>尚未設定</>}
-            <div className="small muted">狀態：{aiStatusLabel[user.aiStatus]}</div>
-          </div>
-          {!changingKey && <button onClick={() => setChangingKey(true)}>{user.nvidiaKeyLast4 ? "更換" : "設定"}</button>}
-        </div>
-        {user.aiStatus === "no_credits" && (
-          <p className="small">點數用完時，可以到 build.nvidia.com 申請更多點數，或換一組新的 key。</p>
-        )}
-        {changingKey && (
-          <>
-            <NvidiaKeyGuide />
-            <NvidiaKeyForm onSaved={() => setChangingKey(false)} />
-          </>
-        )}
       </div>
 
       <h2>推播通知</h2>

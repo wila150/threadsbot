@@ -37,11 +37,6 @@ async function chat(apiKey: string, model: string, messages: { role: string; con
   }
 }
 
-/** 用最便宜的方式確認 key 有效 */
-export async function validateKey(apiKey: string, model: string) {
-  await chat(apiKey, model, [{ role: "user", content: "hi" }], 1);
-}
-
 export interface PersonaSettings {
   persona: string;
   tone: string;

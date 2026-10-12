@@ -46,9 +46,8 @@ export function accountStatusLabel(a: AccountDoc): { text: string; tone: "ok" | 
 
 export const aiStatusLabel: Record<AiStatus, string> = {
   ok: "正常",
-  no_key: "尚未填入 NVIDIA key",
-  no_credits: "AI 點數用完，生成已暫停",
-  invalid_key: "NVIDIA key 無效，生成已暫停",
+  no_credits: "共用 AI 點數用完，生成已暫停",
+  invalid_key: "共用 NVIDIA key 無效，生成已暫停",
 };
 
 export const draftStatusLabel: Record<DraftStatus, string> = {

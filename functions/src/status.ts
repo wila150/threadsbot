@@ -30,13 +30,18 @@ export async function throttle(uid: string, accountId: string, account: AccountD
   );
 }
 
-export async function setAiStatus(uid: string, status: AiStatus) {
-  await refs.user(uid).update({ aiStatus: status });
-  if (status === "no_credits") {
-    await notifyUser(uid, "AI 點數用完了", "所有帳號的 AI 生成已暫停。請更換 NVIDIA key 或申請更多點數。", "/profile");
-  } else if (status === "invalid_key") {
-    await notifyUser(uid, "NVIDIA key 無效", "AI 生成已暫停，請重新填入 NVIDIA API key。", "/profile");
-  }
+/** 共用 AI key 的狀態記在 system/config，所有用戶共用 */
+export async function setAiStatus(status: AiStatus, reason: string | null = null) {
+  await refs.system().set(
+    { aiStatus: status, aiStatusAt: FieldValue.serverTimestamp(), aiStatusReason: reason },
+    { merge: true },
+  );
+  if (status !== "ok") logger.error("共用 AI key 異常，AI 生成暫停", { status, reason });
+}
+
+/** AI 呼叫成功時呼叫：如果之前標成異常，恢復正常 */
+export async function markAiOk(previous: AiStatus | undefined) {
+  if (previous && previous !== "ok") await setAiStatus("ok");
 }
 
 /** 處理 Threads 錯誤；回傳 true 表示這個帳號這一輪應該停下來 */
@@ -53,11 +58,11 @@ export async function handleThreadsError(uid: string, accountId: string, account
   return false;
 }
 
-/** 處理 AI 錯誤；回傳 true 表示整個用戶的 AI 生成應該停下來 */
-export async function handleAiError(uid: string, err: AiError) {
-  logger.warn("AI 錯誤", { uid, kind: err.kind, msg: err.message });
+/** 處理 AI 錯誤；回傳 true 表示這一輪的 AI 生成應該停下來 */
+export async function handleAiError(err: AiError) {
+  logger.warn("AI 錯誤", { kind: err.kind, msg: err.message });
   if (err.kind === "no_credits" || err.kind === "invalid_key") {
-    await setAiStatus(uid, err.kind);
+    await setAiStatus(err.kind, err.message);
     return true;
   }
   return err.kind === "rate";

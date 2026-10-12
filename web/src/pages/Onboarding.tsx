@@ -3,11 +3,10 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ConnectThreadsButton } from "../components/ConnectThreads";
 import { ListInput } from "../components/ListInput";
-import { NvidiaKeyForm, NvidiaKeyGuide } from "../components/NvidiaKeyForm";
 import { db } from "../firebase";
 import { useSession } from "../session";
 
-/** 三步驟：綁定 Threads → 填 NVIDIA key → 設定第一組關鍵字 */
+/** 兩步驟：綁定 Threads → 設定第一組關鍵字（AI 用全系統共用的 key） */
 export function OnboardingPage() {
   const { user, accounts } = useSession();
   const navigate = useNavigate();
@@ -16,9 +15,7 @@ export function OnboardingPage() {
   const [keywords, setKeywords] = useState<string[]>(account?.keywords ?? []);
   const [busy, setBusy] = useState(false);
 
-  const step1 = accounts.length > 0;
-  const step2 = !!user?.nvidiaKeyLast4 && user.aiStatus === "ok";
-  const current = !step1 ? 1 : !step2 ? 2 : 3;
+  const current = accounts.length > 0 ? 2 : 1;
 
   const finish = async (withKeywords: boolean) => {
     if (!user) return;
@@ -34,7 +31,7 @@ export function OnboardingPage() {
     <div className="login">
       <div className="card" style={{ maxWidth: 480 }}>
         <div className="steps">
-          {[1, 2, 3].map((n) => (
+          {[1, 2].map((n) => (
             <div key={n} className={n <= current ? "done" : ""} />
           ))}
         </div>
@@ -53,17 +50,8 @@ export function OnboardingPage() {
 
         {current === 2 && (
           <div className="stack">
-            <h1>2. 填入 NVIDIA API key</h1>
+            <h1>2. 設定第一組關鍵字</h1>
             {params.get("linked") && <div className="banner ok">已綁定 @{params.get("linked")}</div>}
-            <p className="muted">AI 回覆會用你自己的 key 與額度產生，費用與額度跟其他用戶互不影響。</p>
-            <NvidiaKeyGuide />
-            <NvidiaKeyForm submitLabel="驗證並儲存" />
-          </div>
-        )}
-
-        {current === 3 && (
-          <div className="stack">
-            <h1>3. 設定第一組關鍵字</h1>
             <p className="muted">
               系統每 10 分鐘會用這些關鍵字搜尋 @{account?.username} 可以回覆的貼文。之後可以在「海巡設定」調整人設、時段與上限。
             </p>

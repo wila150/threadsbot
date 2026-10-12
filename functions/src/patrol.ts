@@ -5,25 +5,18 @@ import { logger } from "firebase-functions";
 import { AiError, generateReply } from "./ai";
 import {
   AUTHOR_COOLDOWN_HOURS,
+  MAX_AI_CALLS_PER_RUN,
   MAX_DRAFTS_PER_RUN,
+  NVIDIA_API_KEY,
   MAX_POST_AGE_HOURS,
   REGION,
   THREADS_SEARCH_DAILY_CAP,
 } from "./config";
 import { decrypt } from "./crypto";
-import {
-  bumpUsage,
-  db,
-  effectiveDailyLimit,
-  getPlan,
-  getSecrets,
-  inActiveHours,
-  isSystemPaused,
-  refs,
-} from "./db";
+import { aiAvailable, bumpUsage, db, effectiveDailyLimit, getPlan, getSecrets, getSystem, inActiveHours, refs } from "./db";
 import { notifyUser } from "./notify";
 import { scheduleSend } from "./send";
-import { handleAiError, handleThreadsError } from "./status";
+import { handleAiError, handleThreadsError, markAiOk } from "./status";
 import { keywordSearch, ThreadsError, type ThreadsPost } from "./threads";
 import type { AccountDoc, DraftDoc, UserDoc } from "./types";
 
@@ -34,8 +27,13 @@ export interface PatrolTask {
 
 /** 排程每 10 分鐘呼叫：只派發「已開啟、在巡邏時段內、沒被暫停」的帳號 */
 export async function dispatchPatrols(): Promise<number> {
-  if (await isSystemPaused()) {
+  const system = await getSystem();
+  if (system.paused) {
     logger.info("系統已暫停，跳過本輪");
+    return 0;
+  }
+  if (!aiAvailable(system)) {
+    logger.warn("共用 AI key 異常，跳過本輪", { aiStatus: system.aiStatus });
     return 0;
   }
   const snap = await db.collectionGroup("accounts").where("enabled", "==", true).get();
@@ -50,7 +48,7 @@ export async function dispatchPatrols(): Promise<number> {
     if (!readyToPatrol(account)) continue;
     if (!userCache.has(uid)) userCache.set(uid, (await refs.user(uid).get()).data() as UserDoc | undefined);
     const user = userCache.get(uid);
-    if (!user || user.disabled || user.aiStatus !== "ok") continue;
+    if (!user || user.disabled) continue;
 
     try {
       await queue.enqueue({ uid, accountId: doc.id }, { id: `p-${uid}-${doc.id}-${slot}`, dispatchDeadlineSeconds: 300 });
@@ -82,9 +80,10 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   ]);
   const user = userSnap.data() as UserDoc | undefined;
   const account = accountSnap.data() as AccountDoc | undefined;
-  if (!user || !account || user.disabled || user.aiStatus !== "ok") return;
+  if (!user || !account || user.disabled) return;
   if (!readyToPatrol(account)) return;
-  if (await isSystemPaused()) return;
+  const system = await getSystem();
+  if (system.paused || !aiAvailable(system)) return;
 
   // 限流期滿，恢復正常
   if (account.status === "throttled") {
@@ -103,10 +102,9 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   }
 
   const tokenEnc = secrets.accounts?.[accountId]?.token;
-  const keyEnc = secrets.nvidiaKey;
-  if (!tokenEnc || !keyEnc) return;
+  if (!tokenEnc) return;
   const token = decrypt(tokenEnc);
-  const apiKey = decrypt(keyEnc);
+  const apiKey = NVIDIA_API_KEY.value();
 
   // 1. 搜尋
   const found: { post: ThreadsPost; keyword: string }[] = [];
@@ -136,11 +134,12 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   let aiCalls = 0;
   const newDraftIds: string[] = [];
   for (const { post, keyword } of candidates) {
-    if (draftBudget <= 0) break;
+    if (draftBudget <= 0 || aiCalls >= MAX_AI_CALLS_PER_RUN) break;
     const seenRef = refs.seen(uid, accountId, post.id);
     try {
       aiCalls++;
       const result = await generateReply(apiKey, account, { text: post.text ?? "", author: post.username ?? "" });
+      if (aiCalls === 1) await markAiOk(system.aiStatus);
       if (!result.relevant) {
         irrelevant++;
         await seenRef.set({ result: "irrelevant", reason: result.reason, at: FieldValue.serverTimestamp() });
@@ -176,7 +175,7 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
       draftBudget--;
     } catch (err) {
       if (err instanceof AiError) {
-        if (await handleAiError(uid, err)) break;
+        if (await handleAiError(err)) break;
         continue; // 格式錯誤之類，下一輪會再試這篇
       }
       throw err;

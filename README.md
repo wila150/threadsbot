@@ -1,6 +1,6 @@
 # Threads 海巡系統
 
-多用戶的 Threads 海巡 webapp（PWA）。每個用戶綁定自己的 Threads 帳號與 NVIDIA API key，系統依各自的關鍵字自動搜尋貼文，再用 AI 產生回覆草稿，用戶審核後送出。
+多用戶的 Threads 海巡 webapp（PWA）。每個用戶綁定自己的 Threads 帳號，系統依各自的關鍵字自動搜尋貼文，再用 AI（全系統共用一組 NVIDIA API key）產生回覆草稿，用戶審核後送出。
 
 架構文件：[Threads 海巡系統 — 系統架構](https://claude.ai/code/artifact/02ad0977-d21c-4160-9d89-056a530c74a2)
 
@@ -15,10 +15,10 @@ functions/src/
   patrol.ts              海巡引擎：排程派發 → 搜尋 → 過濾去重 → AI → 草稿／自動送出
   send.ts                送出回覆（最短間隔＋隨機延遲、每日上限、搶鎖防重送）
   threads.ts             Meta Threads 官方 API（OAuth、關鍵字搜尋、回覆、insights）
-  ai.ts                  NVIDIA Build API（OpenAI 相容格式；相關性判斷＋產生回覆一次完成）
-  accounts.ts            註冊、Threads 綁定／解除、NVIDIA key
+  ai.ts                  NVIDIA Build API（OpenAI 相容格式；相關性判斷＋產生回覆一次完成；共用 key）
+  accounts.ts            註冊、Threads 綁定／解除
   drafts.ts              送出、重新生成、試產一則
-  status.ts              錯誤 → 帳號狀態 + 通知（token 失效、限流、402、key 無效）
+  status.ts              錯誤 → 帳號狀態 + 通知（token 失效、限流）；共用 AI key 狀態（402、key 無效）記在 system/config
   maintenance.ts         token 自動更新、互動數據、清理
   admin.ts               管理員操作
   crypto.ts              AES-256-GCM 加密 token 與 key
@@ -73,7 +73,11 @@ npx firebase use --add          # 選你的專案
 npm run gen-key
 npx firebase functions:secrets:set ENCRYPTION_KEY
 npx firebase functions:secrets:set THREADS_APP_SECRET
+# 全系統共用的 NVIDIA API key（build.nvidia.com → Get API Key）
+npx firebase functions:secrets:set NVIDIA_API_KEY
 ```
+
+更換 NVIDIA key：重新執行 `secrets:set NVIDIA_API_KEY` 後再 `npm run deploy`。
 
 建立 `functions/.env`：
 
@@ -113,10 +117,11 @@ npm run dev                     # 前端，連正式 Firebase
 
 ## 安全與防濫用（實作對照）
 
-- Threads token 與 NVIDIA key 以 AES-256-GCM 加密存在 `secrets/{uid}`，Security Rules 全面禁止前端讀寫；前端只看得到 key 末 4 碼。
+- Threads token 以 AES-256-GCM 加密存在 `secrets/{uid}`，Security Rules 全面禁止前端讀寫。共用的 NVIDIA key 放在 Secret Manager，只有後端讀得到。
 - 送出一律走後端 `sendDraft`；前端只能編輯或略過草稿。
 - 每帳號每日上限（取帳號設定、方案、限流後降低值三者最小）＋最短回覆間隔＋ 0～50% 隨機延遲；手動送出若未過間隔也會排隊。
-- 同一帳號不重複回同一篇（`seen`），同一作者 24 小時內只回一次（`authors`），每輪最多產 3 則草稿。
+- 同一帳號不重複回同一篇（`seen`），同一作者 24 小時內只回一次（`authors`），每輪最多產 3 則草稿、最多呼叫 AI 6 次。
+- 共用 AI key：點數用完（402）或 key 無效時全系統暫停 AI，每小時自動重試一次；同時最多 4 個帳號在跑海巡，避免超過每分鐘 40 次的限制。
 - AI 一次呼叫同時判斷相關性與產生回覆；不相關就不產草稿；回覆會再過濾掉連結與 hashtag 並截斷字數。
 - 自動送出預設關閉，需方案允許，開啟時跳出風險提醒。
 - 被限流：暫停該帳號 24 小時、每日上限減半。管理員可暫停個別帳號、停用用戶或全系統暫停。
