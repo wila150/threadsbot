@@ -46,6 +46,8 @@ export interface AccountDoc {
   activeHours: { start: number; end: number };
   mode: PatrolMode;
   enabled: boolean;
+  /** 測試模式：也處理自己發的貼文（App 審核前搜尋只找得到自己的貼文） */
+  includeOwnPosts?: boolean;
   // 狀態（只有後端寫）
   status: AccountStatus;
   statusReason: string | null;

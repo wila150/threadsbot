@@ -23,6 +23,7 @@ function pickSettings(a: AccountDoc): AccountSettings {
     activeHours: a.activeHours,
     mode: a.mode,
     enabled: a.enabled,
+    includeOwnPosts: a.includeOwnPosts ?? false,
   };
 }
 
@@ -230,6 +231,21 @@ function SettingsForm({ account }: { account: AccountDoc }) {
           <small className="muted" style={{ display: "block", marginTop: 4 }}>
             {plan.allowAutoSend ? "自動送出會依間隔與隨機延遲逐則發出。" : "目前方案不開放自動送出。"}
           </small>
+        </div>
+      </div>
+
+      <h2>測試</h2>
+      <div className="card">
+        <div className="spread">
+          <div>
+            <div style={{ fontWeight: 600 }}>測試模式：包含自己的貼文</div>
+            <div className="small muted">
+              App 通過 Meta 審核前，Threads 只搜得到你自己發的貼文。開啟後海巡會處理自己的貼文、不套用同作者冷卻，方便測試完整流程。正式使用請關閉。
+            </div>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={!!form.includeOwnPosts} onChange={(e) => set("includeOwnPosts", e.target.checked)} />
+          </label>
         </div>
       </div>
 

@@ -28,6 +28,7 @@ export interface AccountSettings {
   activeHours: { start: number; end: number };
   mode: "draft" | "auto";
   enabled: boolean;
+  includeOwnPosts?: boolean;
 }
 
 export interface AccountDoc extends AccountSettings {

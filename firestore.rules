@@ -26,7 +26,8 @@ service cloud.firestore {
         allow update: if isOwner(uid)
           && onlyChanges([
             'keywords', 'excludeWords', 'region', 'persona', 'tone', 'model',
-            'maxChars', 'dailyLimit', 'intervalMinutes', 'activeHours', 'mode', 'enabled'
+            'maxChars', 'dailyLimit', 'intervalMinutes', 'activeHours', 'mode', 'enabled',
+            'includeOwnPosts'
           ])
           && request.resource.data.keywords is list
           && request.resource.data.keywords.size() <= 10

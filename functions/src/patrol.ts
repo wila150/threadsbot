@@ -249,7 +249,7 @@ async function filterPosts(
     const { post } = item;
     const text = (post.text ?? "").trim();
     if (!text || unique.has(post.id)) continue;
-    if ((post.username ?? "").toLowerCase() === own) continue;
+    if (!account.includeOwnPosts && (post.username ?? "").toLowerCase() === own) continue;
     if (post.timestamp && Date.parse(post.timestamp) < minTime) continue;
     const lower = text.toLowerCase();
     if (exclude.some((w) => lower.includes(w))) continue;
@@ -261,6 +261,9 @@ async function filterPosts(
   const items = [...unique.values()];
   const seenSnaps = await db.getAll(...items.map((i) => refs.seen(uid, accountId, i.post.id)));
   const fresh = items.filter((_, i) => !seenSnaps[i].exists);
+
+  // 測試模式下貼文多半都是自己的，不套用作者冷卻
+  if (account.includeOwnPosts) return fresh;
 
   // 作者冷卻：同一位作者短時間內不重複回
   const authors = [...new Set(fresh.map((i) => i.post.username ?? ""))];
