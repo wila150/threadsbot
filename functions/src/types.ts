@@ -23,6 +23,8 @@ export interface PatrolSummary {
   irrelevant: number;
   drafts: number;
   zeroKeywords: string[];
+  /** 各過濾原因擋掉的篇數 */
+  filtered?: { own: number; old: number; excluded: number; seen: number; cooldown: number };
 }
 
 export type AccountStatus = "ok" | "throttled" | "reauth" | "suspended";

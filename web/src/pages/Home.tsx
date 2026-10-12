@@ -148,10 +148,29 @@ function PatrolSummary({ account }: { account: AccountDoc }) {
       {s.fetched > 0 && s.zeroKeywords.length > 0 && (
         <p className="small muted" style={{ margin: "6px 0 0" }}>沒有結果的關鍵字：{s.zeroKeywords.join("、")}</p>
       )}
-      {s.fetched > 0 && s.candidates === 0 && (
-        <p className="small muted" style={{ margin: "6px 0 0" }}>搜到的貼文都看過了、太舊、含排除詞或是自己發的。</p>
-      )}
+      {s.fetched > 0 && s.fetched > s.candidates && <FilteredReasons s={s} />}
     </div>
+  );
+}
+
+const FILTER_LABELS = {
+  own: "自己發的（可在海巡設定開啟測試模式）",
+  old: "超過 48 小時",
+  excluded: "含排除詞",
+  seen: "之前已處理過",
+  cooldown: "同作者 24 小時內已回過",
+} as const;
+
+function FilteredReasons({ s }: { s: NonNullable<AccountDoc["lastPatrolSummary"]> }) {
+  const parts = s.filtered
+    ? (Object.keys(FILTER_LABELS) as (keyof typeof FILTER_LABELS)[])
+        .filter((k) => s.filtered![k] > 0)
+        .map((k) => `${FILTER_LABELS[k]} ${s.filtered![k]} 篇`)
+    : [];
+  return (
+    <p className="small muted" style={{ margin: "6px 0 0" }}>
+      被過濾：{parts.length ? parts.join("、") : "重複或沒有文字內容"}
+    </p>
   );
 }
 

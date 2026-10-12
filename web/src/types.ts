@@ -50,6 +50,7 @@ export interface AccountDoc extends AccountSettings {
     irrelevant: number;
     drafts: number;
     zeroKeywords: string[];
+    filtered?: { own: number; old: number; excluded: number; seen: number; cooldown: number };
   };
   lastSentAt: Timestamp | null;
 }

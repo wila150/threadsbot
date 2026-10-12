@@ -140,7 +140,8 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   }
 
   // 2. 過濾與去重
-  const candidates = await filterPosts(uid, accountId, account, found);
+  const filtered: FilterStats = { own: 0, old: 0, excluded: 0, seen: 0, cooldown: 0 };
+  const candidates = await filterPosts(uid, accountId, account, found, filtered);
 
   // 3. AI 判斷與產生
   let drafts = 0;
@@ -209,6 +210,7 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
         irrelevant,
         drafts,
         zeroKeywords: zeroResultKeywords,
+        filtered,
       },
     }),
   ]);
@@ -219,6 +221,7 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
     searches,
     fetched: found.length,
     candidates: candidates.length,
+    filtered,
     aiCalls,
     irrelevant,
     drafts,
@@ -233,11 +236,20 @@ export async function patrolAccount({ uid, accountId }: PatrolTask): Promise<voi
   }
 }
 
+export interface FilterStats {
+  own: number;
+  old: number;
+  excluded: number;
+  seen: number;
+  cooldown: number;
+}
+
 async function filterPosts(
   uid: string,
   accountId: string,
   account: AccountDoc,
   found: { post: ThreadsPost; keyword: string }[],
+  stats: FilterStats,
 ) {
   const minTime = Date.now() - MAX_POST_AGE_HOURS * 3600_000;
   const exclude = account.excludeWords.map((w) => w.toLowerCase()).filter(Boolean);
@@ -249,10 +261,19 @@ async function filterPosts(
     const { post } = item;
     const text = (post.text ?? "").trim();
     if (!text || unique.has(post.id)) continue;
-    if (!account.includeOwnPosts && (post.username ?? "").toLowerCase() === own) continue;
-    if (post.timestamp && Date.parse(post.timestamp) < minTime) continue;
+    if (!account.includeOwnPosts && (post.username ?? "").toLowerCase() === own) {
+      stats.own++;
+      continue;
+    }
+    if (post.timestamp && Date.parse(post.timestamp) < minTime) {
+      stats.old++;
+      continue;
+    }
     const lower = text.toLowerCase();
-    if (exclude.some((w) => lower.includes(w))) continue;
+    if (exclude.some((w) => lower.includes(w))) {
+      stats.excluded++;
+      continue;
+    }
     unique.set(post.id, item);
   }
   if (!unique.size) return [];
@@ -261,6 +282,7 @@ async function filterPosts(
   const items = [...unique.values()];
   const seenSnaps = await db.getAll(...items.map((i) => refs.seen(uid, accountId, i.post.id)));
   const fresh = items.filter((_, i) => !seenSnaps[i].exists);
+  stats.seen += items.length - fresh.length;
 
   // 測試模式下貼文多半都是自己的，不套用作者冷卻
   if (account.includeOwnPosts) return fresh;
@@ -278,12 +300,14 @@ async function filterPosts(
   );
   // 同一輪也只取同作者一篇
   const picked = new Set<string>();
-  return fresh.filter((i) => {
+  const result = fresh.filter((i) => {
     const a = i.post.username ?? "";
     if (cooling.has(a) || picked.has(a)) return false;
     picked.add(a);
     return true;
   });
+  stats.cooldown += fresh.length - result.length;
+  return result;
 }
 
 function shuffle<T>(arr: T[]): T[] {
