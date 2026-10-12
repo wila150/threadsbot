@@ -10,6 +10,7 @@ import { ALL_SECRETS, ENCRYPTION_KEY, REGION, TIMEZONE } from "./config";
 import { getAccount, refs } from "./db";
 import * as drafts from "./drafts";
 import * as maintenance from "./maintenance";
+import { handleDataDeletion, handleUninstall, parseSignedRequest } from "./metaCallbacks";
 import { dispatchPatrols, enqueuePatrolNow, patrolAccount, type PatrolTask } from "./patrol";
 import { sendDraftNow } from "./send";
 
@@ -49,6 +50,25 @@ export const threadsAuthCallback = onRequest({ secrets: ALL_SECRETS }, async (re
     logger.error("Threads OAuth 失敗", err);
     res.redirect(302, `/accounts?error=${encodeURIComponent("綁定失敗，請稍後再試")}`);
   }
+});
+
+export const threadsUninstall = onRequest({ secrets: ALL_SECRETS }, async (req, res) => {
+  const threadsUserId = parseSignedRequest(String(req.body?.signed_request ?? ""));
+  if (!threadsUserId) {
+    res.status(400).send("invalid signed_request");
+    return;
+  }
+  await handleUninstall(threadsUserId);
+  res.status(200).send("ok");
+});
+
+export const threadsDataDeletion = onRequest({ secrets: ALL_SECRETS }, async (req, res) => {
+  const threadsUserId = parseSignedRequest(String(req.body?.signed_request ?? ""));
+  if (!threadsUserId) {
+    res.status(400).send("invalid signed_request");
+    return;
+  }
+  res.json(await handleDataDeletion(threadsUserId));
 });
 
 export const unlinkAccount = onCall(callOpts, async (req) => {
