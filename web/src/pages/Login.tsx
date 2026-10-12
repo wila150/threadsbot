@@ -48,7 +48,7 @@ export function LoginPage() {
   return (
     <div className="login">
       <div className="card">
-        <h1>Threads 海巡</h1>
+        <h1>Threads海巡鼠</h1>
         <p className="muted">依關鍵字找到相關貼文，AI 幫你寫好回覆草稿。</p>
 
         <button className="full" disabled={busy} onClick={() => run(() => signInWithPopup(auth, new GoogleAuthProvider()))}>

@@ -1,8 +1,8 @@
-# Threads 海巡系統
+# Threads海巡鼠
 
-多用戶的 Threads 海巡 webapp（PWA）。每個用戶綁定自己的 Threads 帳號，系統依各自的關鍵字自動搜尋貼文，再用 AI（全系統共用一組 NVIDIA API key）產生回覆草稿，用戶審核後送出。
+多用戶的 Threads海巡鼠 webapp（PWA）。每個用戶綁定自己的 Threads 帳號，系統依各自的關鍵字自動搜尋貼文，再用 AI（全系統共用一組 NVIDIA API key）產生回覆草稿，用戶審核後送出。
 
-架構文件：[Threads 海巡系統 — 系統架構](https://claude.ai/code/artifact/02ad0977-d21c-4160-9d89-056a530c74a2)
+架構文件：[Threads海巡鼠 — 系統架構](https://claude.ai/code/artifact/02ad0977-d21c-4160-9d89-056a530c74a2)
 
 ## 專案結構
 

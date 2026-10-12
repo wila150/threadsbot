@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
       manifest: {
-        name: "Threads 海巡",
-        short_name: "海巡",
+        name: "Threads海巡鼠",
+        short_name: "海巡鼠",
         description: "依關鍵字自動找 Threads 貼文，AI 產生回覆草稿",
         lang: "zh-TW",
         theme_color: "#111111",

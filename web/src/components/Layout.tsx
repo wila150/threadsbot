@@ -34,7 +34,7 @@ export function Layout() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">Threads 海巡</div>
+        <div className="brand">Threads海巡鼠</div>
         <nav>
           {NAV.filter((n) => n.to !== "/more").map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end}>
