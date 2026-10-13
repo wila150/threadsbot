@@ -53,6 +53,8 @@ export async function collectInsights() {
   const since = Timestamp.fromMillis(Date.now() - 7 * DAY);
   const snap = await db.collectionGroup("drafts").where("status", "==", "sent").where("sentAt", ">", since).get();
   const tokenCache = new Map<string, string | null>();
+  let updated = 0;
+  let failed = 0;
 
   for (const doc of snap.docs) {
     const draft = doc.data() as DraftDoc;
@@ -68,11 +70,14 @@ export async function collectInsights() {
     try {
       const insights = await getInsights(token, draft.replyPostId);
       await doc.ref.update({ insights: { ...insights, updatedAt: FieldValue.serverTimestamp() } });
+      updated++;
     } catch (err) {
+      failed++;
       if (err instanceof ThreadsError && (err.kind === "auth" || err.kind === "rate")) tokenCache.set(cacheKey, null);
-      logger.debug("insights 失敗", { uid, draftId: doc.id, err: String(err) });
+      logger.warn("insights 失敗", { uid, draftId: doc.id, err: String(err) });
     }
   }
+  logger.info("互動數據更新完成", { sentReplies: snap.size, updated, failed });
 }
 
 /** 每小時：清掉過期的 OAuth state、卡在 sending 太久的草稿 */
