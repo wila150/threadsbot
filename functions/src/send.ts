@@ -26,10 +26,22 @@ export async function scheduleSend(uid: string, draftId: string, opts: { auto: b
 
   const sendAt = await db.runTransaction(async (tx) => {
     const current = (await tx.get(refs.draft(uid, draftId))).data() as DraftDoc | undefined;
-    if (!current || !["pending", "failed"].includes(current.status)) throw new Error("這則草稿已處理過");
     const account = (await tx.get(accountRef)).data() as AccountDoc | undefined;
     if (!account) throw new Error("帳號已解除綁定");
+    // 測試模式下手動送出不受回覆間隔限制，排隊中的也可以立即送出
+    const testSendNow = !opts.auto && account.includeOwnPosts === true;
+    const allowed = testSendNow ? ["pending", "failed", "queued"] : ["pending", "failed"];
+    if (!current || !allowed.includes(current.status)) throw new Error("這則草稿已處理過");
     const now = Date.now();
+    if (testSendNow) {
+      tx.update(refs.draft(uid, draftId), {
+        status: "queued",
+        scheduledAt: Timestamp.fromMillis(now),
+        failReason: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return now;
+    }
     const next = account.nextSendAt?.toMillis() ?? 0;
     // 手動送出且已過間隔：立即送；自動送出一律加隨機延遲
     const at = !opts.auto && next <= now ? now : Math.max(now + 30_000, next) + Math.floor(Math.random() * 60_000);

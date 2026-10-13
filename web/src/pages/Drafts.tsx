@@ -39,13 +39,29 @@ export function DraftsPage() {
       {loading && <div className="empty">載入中…</div>}
       {!loading && drafts.length === 0 && <div className="card empty">目前沒有待審草稿 🎉</div>}
       {drafts.map((d) => (
-        <DraftCard key={d.id} uid={uid} draft={d} showAccount={accounts.length > 1} />
+        <DraftCard
+          key={d.id}
+          uid={uid}
+          draft={d}
+          showAccount={accounts.length > 1}
+          testMode={accounts.find((a) => a.id === d.accountId)?.includeOwnPosts === true}
+        />
       ))}
     </div>
   );
 }
 
-function DraftCard({ uid, draft, showAccount }: { uid: string; draft: DraftDoc; showAccount: boolean }) {
+function DraftCard({
+  uid,
+  draft,
+  showAccount,
+  testMode,
+}: {
+  uid: string;
+  draft: DraftDoc;
+  showAccount: boolean;
+  testMode: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(draft.replyText);
   const [busy, setBusy] = useState<string | null>(null);
@@ -146,6 +162,13 @@ function DraftCard({ uid, draft, showAccount }: { uid: string; draft: DraftDoc; 
           </button>
           <button disabled={!!busy} onClick={skip}>
             略過
+          </button>
+        </div>
+      )}
+      {draft.status === "queued" && testMode && (
+        <div className="actions">
+          <button className="primary" disabled={!!busy} onClick={send}>
+            {busy === "send" ? "送出中…" : "立即送出（測試模式）"}
           </button>
         </div>
       )}
