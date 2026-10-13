@@ -58,7 +58,7 @@ export async function collectInsights() {
 
   for (const doc of snap.docs) {
     const draft = doc.data() as DraftDoc;
-    if (!draft.replyPostId) continue;
+    if (!draft.replyPostId || draft.deletedAt) continue;
     const uid = doc.ref.parent.parent!.id;
     const cacheKey = `${uid}/${draft.accountId}`;
     if (!tokenCache.has(cacheKey)) {

@@ -96,6 +96,8 @@ export interface DraftDoc {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   sentAt: Timestamp | null;
+  /** 已從 Threads 刪除的時間；草稿狀態維持 sent */
+  deletedAt?: Timestamp | null;
 }
 
 export interface SystemDoc {

@@ -92,6 +92,7 @@ export interface DraftDoc {
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
   sentAt: Timestamp | null;
+  deletedAt?: Timestamp | null;
 }
 
 export interface UsageDoc {

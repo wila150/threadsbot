@@ -1,5 +1,6 @@
 import { collection, limit, orderBy, query, where } from "firebase/firestore";
 import { useState } from "react";
+import { api, errMsg } from "../api";
 import { db } from "../firebase";
 import { draftStatusLabel, fmtTime } from "../format";
 import { useQuery } from "../hooks";
@@ -54,7 +55,10 @@ export function HistoryPage() {
           </div>
           <div className="post small">{d.postText}</div>
           <div className="reply">
-            <div className="reply-text">{d.replyText}</div>
+            <div className="reply-text" style={d.deletedAt ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>
+              {d.replyText}
+            </div>
+            {d.deletedAt && <span className="pill muted">已從 Threads 刪除</span>}
             {d.failReason && <div className="small muted">{d.failReason}</div>}
           </div>
           <div className="row small muted" style={{ marginTop: 8 }}>
@@ -68,6 +72,7 @@ export function HistoryPage() {
                 原貼文 ↗
               </a>
             )}
+            {tab === "sent" && !d.deletedAt && <DeleteReplyButton draftId={d.id} />}
           </div>
         </div>
       ))}
@@ -77,5 +82,34 @@ export function HistoryPage() {
         </button>
       )}
     </div>
+  );
+}
+
+/** 從 Threads 刪除已送出的回覆 */
+function DeleteReplyButton({ draftId }: { draftId: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <>
+      <button
+        className="link danger"
+        disabled={busy}
+        onClick={async () => {
+          if (!confirm("確定要從 Threads 刪除這則回覆？刪除後無法復原。")) return;
+          setBusy(true);
+          setError(null);
+          try {
+            await api.deleteReply({ draftId });
+          } catch (err) {
+            setError(errMsg(err));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "刪除中…" : "從 Threads 刪除"}
+      </button>
+      {error && <span className="error">{error}</span>}
+    </>
   );
 }

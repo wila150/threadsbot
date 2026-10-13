@@ -16,6 +16,8 @@ export const api = {
   sendDraft: fn<{ draftId: string }, { status?: string; failReason: string | null; immediate: boolean; sendAt: string }>(
     "sendDraft",
   ),
+  cancelSend: fn<{ draftId: string }, { ok: boolean }>("cancelSend"),
+  deleteReply: fn<{ draftId: string }, { ok: boolean }>("deleteReply"),
   regenerateDraft: fn<{ draftId: string }, { replyText: string; reason: string }>("regenerateDraft"),
   testGenerate: fn<
     { settings: Partial<AccountSettings>; postText?: string },

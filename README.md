@@ -59,7 +59,7 @@ npx firebase use --add          # 選你的專案
 ### 2. Meta Threads App
 
 1. 到 [Meta for Developers](https://developers.facebook.com/apps) 建立 App，使用案例選「Access the Threads API」。
-2. 權限加上：`threads_basic`、`threads_content_publish`、`threads_keyword_search`、`threads_manage_replies`、`threads_manage_insights`。
+2. 權限加上：`threads_basic`、`threads_content_publish`、`threads_keyword_search`、`threads_manage_replies`、`threads_manage_insights`、`threads_delete`。
 3. **Redirect callback URL** 填：`https://<你的網域>/api/threads/callback`
 4. 開發階段：在「App roles → Roles」把要測試的 Threads 帳號加為 **Threads Tester**，並在該帳號的 Threads 設定 → 帳號 → 網站權限 接受邀請。
 5. 記下 Threads App ID 與 App Secret。

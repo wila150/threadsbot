@@ -165,10 +165,23 @@ function DraftCard({
           </button>
         </div>
       )}
-      {draft.status === "queued" && testMode && (
+      {draft.status === "queued" && (
         <div className="actions">
-          <button className="primary" disabled={!!busy} onClick={send}>
-            {busy === "send" ? "送出中…" : "立即送出（測試模式）"}
+          {testMode && (
+            <button className="primary" disabled={!!busy} onClick={send}>
+              {busy === "send" ? "送出中…" : "立即送出（測試模式）"}
+            </button>
+          )}
+          <button
+            disabled={!!busy}
+            onClick={() =>
+              act("cancel", async () => {
+                await api.cancelSend({ draftId: draft.id });
+                setMsg("已取消送出，草稿回到待審");
+              })
+            }
+          >
+            {busy === "cancel" ? "取消中…" : "取消送出"}
           </button>
         </div>
       )}

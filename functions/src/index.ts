@@ -12,7 +12,7 @@ import * as drafts from "./drafts";
 import * as maintenance from "./maintenance";
 import { handleDataDeletion, handleUninstall, parseSignedRequest } from "./metaCallbacks";
 import { dispatchPatrols, enqueuePatrolNow, patrolAccount, type PatrolTask } from "./patrol";
-import { sendDraftNow } from "./send";
+import { cancelQueuedSend, deleteSentReply, sendDraftNow } from "./send";
 
 setGlobalOptions({ region: REGION, maxInstances: 20 });
 
@@ -92,6 +92,24 @@ export const deleteMyData = onCall(callOpts, async (req) => {
 
 export const sendDraft = onCall(callOpts, (req) => drafts.sendDraft(uidOf(req), str(req.data?.draftId, "draftId")));
 
+export const cancelSend = onCall(callOpts, async (req) => {
+  try {
+    await cancelQueuedSend(uidOf(req), str(req.data?.draftId, "draftId"));
+  } catch (err) {
+    throw new HttpsError("failed-precondition", err instanceof Error ? err.message : String(err));
+  }
+  return { ok: true };
+});
+
+export const deleteReply = onCall(callOpts, async (req) => {
+  try {
+    await deleteSentReply(uidOf(req), str(req.data?.draftId, "draftId"));
+  } catch (err) {
+    throw new HttpsError("failed-precondition", err instanceof Error ? err.message : String(err));
+  }
+  return { ok: true };
+});
+
 export const regenerateDraft = onCall({ ...callOpts, timeoutSeconds: 120 }, (req) =>
   drafts.regenerateDraft(uidOf(req), str(req.data?.draftId, "draftId")),
 );
@@ -157,14 +175,14 @@ export const patrolAccountTask = onTaskDispatched<PatrolTask>(
   },
 );
 
-export const sendReplyTask = onTaskDispatched<{ uid: string; draftId: string }>(
+export const sendReplyTask = onTaskDispatched<{ uid: string; draftId: string; scheduledAt?: number }>(
   {
     secrets: [ENCRYPTION_KEY],
     retryConfig: { maxAttempts: 1 },
     rateLimits: { maxConcurrentDispatches: 10 },
   },
   async (req) => {
-    await sendDraftNow(req.data.uid, req.data.draftId);
+    await sendDraftNow(req.data.uid, req.data.draftId, req.data.scheduledAt);
   },
 );
 

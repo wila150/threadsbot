@@ -27,10 +27,10 @@ function classify(status: number, code?: number, subcode?: number): ThreadsError
   return "other";
 }
 
-async function call<T>(method: "GET" | "POST", path: string, params: Record<string, string>): Promise<T> {
+async function call<T>(method: "GET" | "POST" | "DELETE", path: string, params: Record<string, string>): Promise<T> {
   const url = new URL(path.startsWith("http") ? path : `${GRAPH}/${path}`);
   const init: RequestInit = { method };
-  if (method === "GET") {
+  if (method === "GET" || method === "DELETE") {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   } else {
     init.body = new URLSearchParams(params);
@@ -150,4 +150,9 @@ export async function publishReply(token: string, replyToId: string, text: strin
     access_token: token,
   });
   return published.id;
+}
+
+/** 刪除自己發的貼文或回覆（需要 threads_delete；每帳號每天最多 100 則） */
+export async function deletePost(token: string, mediaId: string): Promise<void> {
+  await call<{ success?: boolean }>("DELETE", `${VERSION}/${mediaId}`, { access_token: token });
 }
